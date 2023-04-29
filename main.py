@@ -2,13 +2,13 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from scipy.spatial import distance
 from skimage import io
+from skimage import feature
 from skimage.color import rgb2gray
 from skimage.feature import blob_log
 
 from skimage.segmentation import felzenszwalb, mark_boundaries
 import numpy as np
 from sklearn.cluster import KMeans
-
 white = (255, 255, 255)
 
 
@@ -17,6 +17,19 @@ def my_distance(a, b):
 
 
 img = io.imread("photos/2.jpg")
+
+
+#Режем картинку на 2
+
+dimensions = img.shape
+pixels_to_cut = 100; #сколько отрезать снизу
+
+height_cutoff = img[0] // 2
+img_field = img[:height_cutoff,:]
+img_info = img[height_cutoff:, :]
+img_field.show()
+
+
 image_gray = rgb2gray(img)
 fig = plt.figure()
 ax = fig.add_subplot(1, 2, 1)
@@ -60,7 +73,7 @@ def middle(a, b):
         color.append((i + j) // 2)
     return color
 
-
+#Словарь сегментов
 dict_seg = {}
 for i in range(img.shape[0]):
     for j in range(img.shape[1]):
@@ -71,7 +84,8 @@ for i in range(img.shape[0]):
         dict_seg[seg] += 1
 max_l = max(dict_seg, key=dict_seg.get)
 print(max_l)
-blobs_log = blob_log(image_gray, max_sigma=100, num_sigma=10, threshold=.09)
+
+blobs_log = feature.blob_log(image_gray, max_sigma=50, num_sigma=20, threshold=.01)
 fig = plt.figure()
 ax = fig.add_subplot(1, 2, 1)
 #
@@ -83,7 +97,7 @@ for blob in blobs_log:
     # print(max_l, end=" ")
     # print(dic_seg_claster[segments[int(y), int(x)]])
     if segments[int(y), int(x)] == max_l:
-        c = plt.Circle((x, y), r, color='white', linewidth=2, fill=False)
+        c = plt.Circle((x, y), r, color='green', linewidth=1, fill=False)
         count += 1
         ax.add_patch(c)
 print(count)
