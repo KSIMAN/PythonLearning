@@ -1,20 +1,24 @@
-import  numpy
+import numpy
+import easyocr
 import cv2
 import imutils
 panel_color = (96,96,96)
 
-
 def getWorkFieldValue(image) -> int:
-
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    reader = easyocr.Reader(["ru"])
+    result = reader.readtext(image)
+    print(result)
+    return 1
 
 def computeImage(imagepath):
     image = cv2.imread(imagepath)
-
     arr = cutPicture(image, panel_color)
     image_dust = arr[0]
     image_panel = arr[1]
-
+    getWorkFieldValue(image_panel)
     #распознавание частиц(Не то)
+
     gray = cv2.cvtColor(image_dust, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (3, 3), 0) #размыть
     cv2.imwrite("test.png", gray)
@@ -37,22 +41,22 @@ def computeImage(imagepath):
             cv2.imwrite("Line.png", image_dust)
 
 
-def cutPicture(image, cut_point) -> cv2.image[2]:
+def cutPicture(image, cut_point) -> numpy.ndarray[2]:
     dimensions = image.shape
     height_cutoff = findCutLine(image, cut_point)
     s1 = image[:height_cutoff, :]
     s2 = image[height_cutoff:, :]
-    arr = cv2.image[2] = (s1, s2)
+    getWorkFieldValue(s2)
+    arr = (s1, s2)
     return arr
     cv2.imwrite("p1.png", s1)
     cv2.imwrite("p2.png", s2)
 
-#найти разделитель изображения, потом снизу вверх идти
+#найти разделитель изображения
 def findCutLine(photo, color_rgb) -> int:
     height = photo.shape[0]
     print(height)
     for i in range (height):
-        print(photo[i][0])
         if numpy.all(photo[i][0] == [96, 96,96]):
             return i
 
