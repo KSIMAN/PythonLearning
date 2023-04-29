@@ -38,7 +38,8 @@ def computeImage(imagepath):
     # Микрометров на один пиксель:
     um_per_pixel = getPixelsinNM(image_dust.shape[0], workField)
     print(workField)
-    print(workField)
+    print(um_per_pixel)
+
     #распознавание частиц(Не то)
 
     gray = cv2.cvtColor(image_dust, cv2.COLOR_BGR2GRAY)
@@ -90,6 +91,10 @@ def convertToUM(value_in_pix, um_per_pixel) -> float:
 def getPixelsinNM(width_pixels, width_nanom)-> float:
     return width_pixels/width_nanom
 
+table_data = [ 1 , 300] #потом переложу
+def fixPoint(picture, coords, size_in_pixels, table):
+    cv2.putText(picture, coords, cv2.FONT_HERSHEY_COMPLEX, 1, color=(0,255,0), thickness = 2)
+    table_data.insert([len(table_data), convertToUM(size_in_pixels)])
 
 def addToTable(table):
     table;
