@@ -11,7 +11,7 @@ table_dir = "output/tables"
 image_dir = "output/images"
 photos_dir = ""
 panel_color = (96,96,96)
-
+panel_line = (164,164,164)
 table_data = []
 workField = 0
 
@@ -126,7 +126,7 @@ def findCutLine(photo, color_rgb) -> int:
     height = photo.shape[0]
     print(height)
     for i in range ( height - 1, 0, -1):
-        if numpy.all(photo[i][0] != [96, 96,96]):
+        if numpy.all(photo[i][0] != panel_line) and numpy.all(photo[i][0] != panel_color) :
             return i
 
 
