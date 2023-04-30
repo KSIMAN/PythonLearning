@@ -8,7 +8,6 @@ img = cv2.imread('photos/2.jpg')
 # Преобразуем изображение в оттенки серого
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-
 # Применяем адаптивный порог для выделения пылинок
 thresh = cv2.adaptiveThreshold(gray,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
             cv2.THRESH_BINARY,11,2)

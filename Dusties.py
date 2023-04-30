@@ -15,9 +15,6 @@ workField = 0
 #point dict = []
 def getWorkFieldValue(image) -> int:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    img_filter = cv2.bilateralFilter(image, 11, 15, 15)
-    edges = cv2.Canny(img_filter, 30, 200)
-    pl.imshow(edges)
     reader = easyocr.Reader(["en"])
     result = reader.readtext(image)
     print(result)
@@ -32,6 +29,27 @@ def getWorkFieldValue(image) -> int:
                 ret_string+=string[key]
     return -1;
 
+# Kmeans
+def kmeans_color_quantization(image, clusters=8, rounds=1):
+    h, w = image.shape[:2]
+    samples = numpy.zeros([h*w,3], dtype=numpy.float32)
+    count = 0
+    for x in range(h):
+        for y in range(w):
+            samples[count] = image[x][y]
+            count += 1
+
+    compactness, labels, centers = cv2.kmeans(samples,
+            clusters,
+            None,
+            (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001),
+            rounds,
+            cv2.KMEANS_RANDOM_CENTERS)
+
+    centers = numpy.uint8(centers)
+    res = centers[labels.flatten()]
+    return res.reshape((image.shape))
+
 
 def computeImage(imagepath):
     image = cv2.imread(imagepath)
@@ -43,9 +61,49 @@ def computeImage(imagepath):
     um_per_pixel = getPixelsinNM(image_dust.shape[0], workField)
     print(workField)
     print(um_per_pixel)
-    fixParticle(image, (30, 20), 50,um_per_pixel, 10)
-    fixParticle(image, (10, 40), 10, um_per_pixel, 10)
-    cv2.imwrite('image_2.jpg', image)
+
+    original = image_dust.copy()
+
+    # Perform kmeans color segmentation, grayscale, Otsu's threshold
+    kmeans = kmeans_color_quantization(image_dust, clusters=2)
+    gray = cv2.cvtColor(kmeans, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+    # Find contours, remove tiny specs using contour area filtering, gather points
+    points_list = []
+    size_list = []
+    cnts, h = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2:]
+    AREA_THRESHOLD = 2
+    for c in cnts:
+        area = cv2.contourArea(c)
+
+        if area < AREA_THRESHOLD:
+            # cv2.drawContours(thresh, [c], -1, 0, -1)
+            # cv2.drawContours(thresh, [c], -1, 0, 1)
+            cv2.drawContours(thresh, cnts, -1, (255, 0, 0), 3, cv2.LINE_AA, h, 1)
+        else:
+            (x, y), radius = cv2.minEnclosingCircle(c)
+
+            points_list.append((int(x), int(y)))
+            size_list.append(area)
+            fixParticle(image_dust, (int(x), int(y)), area, um_per_pixel)
+
+    # Apply mask onto original image
+    result = cv2.bitwise_and(original, original, mask=thresh)
+    result[thresh == 255] = (36, 255, 12)
+
+    # Overlay on original
+    original[thresh == 255] = (36, 255, 12)
+
+    print("Number of particles: {}".format(len(points_list)))
+    print("Average particle size: {:.3f}".format(sum(size_list) / len(size_list)))
+
+    # Display
+    cv2.imwrite('kmeans.png', kmeans)
+    cv2.imwrite('original.png', original)
+    cv2.imwrite('thresh.png', thresh)
+    cv2.imwrite('result.png', result)
+    cv2.imwrite('image_2.jpg', image_dust)
     createTable("image_1.jpg")
 
 def cutPicture(image, cut_point) -> numpy.ndarray[2]:
@@ -73,9 +131,9 @@ def convertToUM(value_in_pix, um_per_pixel) -> float:
 
 #def createTable(headers,values):
 def getPixelsinNM(width_pixels, width_nanom)-> float:
-    return width_pixels/width_nanom
+    return width_nanom/width_pixels
 
-def fixParticle(picture, coords, size_in_pixels, um_per_pix, table):
+def fixParticle(picture, coords, size_in_pixels, um_per_pix):
     font = cv2.FONT_HERSHEY_COMPLEX
     size_in_um = convertToUM(size_in_pixels, um_per_pix)
     cv2.putText(picture, str(size_in_um), coords, font , 1, color=(0,255,0), thickness = 2)
