@@ -125,8 +125,8 @@ def cutPicture(image, cut_point) -> numpy.ndarray[2]:
 def findCutLine(photo, color_rgb) -> int:
     height = photo.shape[0]
     print(height)
-    for i in range (height):
-        if numpy.all(photo[i][0] == [96, 96,96]):
+    for i in range ( height - 1, 0, -1):
+        if numpy.all(photo[i][0] != [96, 96,96]):
             return i
 
 
