@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy
 import easyocr
 import cv2
@@ -7,12 +8,15 @@ from matplotlib import pyplot as pl
 
 panel_color = (96,96,96)
 
+table_data = [[ 1 , 300]] #потом переложу
 workField = 0
+
+
 #point dict = []
 def getWorkFieldValue(image) -> int:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     img_filter = cv2.bilateralFilter(image, 11, 15, 15)
-    edges = cv2.Canny(img_filter, 30, 200, )
+    edges = cv2.Canny(img_filter, 30, 200)
     pl.imshow(edges)
     reader = easyocr.Reader(["en"])
     result = reader.readtext(image)
@@ -39,30 +43,10 @@ def computeImage(imagepath):
     um_per_pixel = getPixelsinNM(image_dust.shape[0], workField)
     print(workField)
     print(um_per_pixel)
-
-    #распознавание частиц(Не то)
-
-    gray = cv2.cvtColor(image_dust, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (3, 3), 0) #размыть
-    cv2.imwrite("test.png", gray)
-
-    edges = cv2.Canny(gray, 10, 250) #Контуры
-    cv2.imwrite("edges.png", edges)
-
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-    closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
-    cv2.imwrite("closed.jpg", closed)
-    cnts = cv2.findContours(closed.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cnts = imutils.grab_contours(cnts)
-    #print(cnts)
-    for c in cnts:
-        p = cv2.arcLength(c, True)
-        approx = cv2.approxPolyDP(c, 0.02 * p, True)
-        #print(approx)
-        if len(approx) == 4:
-            cv2.drawContours(image_dust, [approx], -1, (0,255,0), 4)
-            cv2.imwrite("Line.png", image_dust)
-
+    fixParticle(image, (30, 20), 50,um_per_pixel, 10)
+    fixParticle(image, (10, 40), 10, um_per_pixel, 10)
+    cv2.imwrite('image_2.jpg', image)
+    createTable("image_1.jpg")
 
 def cutPicture(image, cut_point) -> numpy.ndarray[2]:
     dimensions = image.shape
@@ -91,13 +75,22 @@ def convertToUM(value_in_pix, um_per_pixel) -> float:
 def getPixelsinNM(width_pixels, width_nanom)-> float:
     return width_pixels/width_nanom
 
-table_data = [ 1 , 300] #потом переложу
-def fixPoint(picture, coords, size_in_pixels, table):
-    cv2.putText(picture, coords, cv2.FONT_HERSHEY_COMPLEX, 1, color=(0,255,0), thickness = 2)
-    table_data.insert([len(table_data), convertToUM(size_in_pixels)])
+def fixParticle(picture, coords, size_in_pixels, um_per_pix, table):
+    font = cv2.FONT_HERSHEY_COMPLEX
+    size_in_um = convertToUM(size_in_pixels, um_per_pix)
+    cv2.putText(picture, str(size_in_um), coords, font , 1, color=(0,255,0), thickness = 2)
+    table_data.append([str(len(table_data) + 1), size_in_um])
+    print(table_data)
 
-def addToTable(table):
-    table;
+def createTable(table_path):
+    fig, ax = plt.subplots()
+    table = ax.table(cellText=table_data, loc='center')
+    table.set_fontsize(14)
+    table.scale(1, 4)
+    ax.axis('off')
+    # display table
+    plt.show()
+    cv2.imwrite(table_path, plt)
 
 
 computeImage("photos/x1000.png")
