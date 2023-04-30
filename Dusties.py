@@ -1,18 +1,20 @@
 import matplotlib.pyplot as plt
 import numpy
 import easyocr
+import os
+import pandas as pd
 import cv2
 import imutils
 from matplotlib import pyplot as pl
 
-
+table_dir = "output/tables"
+image_dir = "output/images"
+photos_dir = ""
 panel_color = (96,96,96)
 
-table_data = [[ 1 , 300]] #потом переложу
+table_data = []
 workField = 0
 
-
-#point dict = []
 def getWorkFieldValue(image) -> int:
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     reader = easyocr.Reader(["en"])
@@ -103,8 +105,11 @@ def computeImage(imagepath):
     cv2.imwrite('original.png', original)
     cv2.imwrite('thresh.png', thresh)
     cv2.imwrite('result.png', result)
-    cv2.imwrite('image_2.jpg', image_dust)
-    createTable("image_1.jpg")
+    file_name = os.path.basename(imagepath)
+    image_name = os.path.splitext(file_name)[0]
+    print(image_name)
+    cv2.imwrite(image_dir + '/' + image_name + ".jpg", image_dust)
+    createTable(image_name)
 
 def cutPicture(image, cut_point) -> numpy.ndarray[2]:
     dimensions = image.shape
@@ -137,18 +142,41 @@ def fixParticle(picture, coords, size_in_pixels, um_per_pix):
     font = cv2.FONT_HERSHEY_COMPLEX
     size_in_um = convertToUM(size_in_pixels, um_per_pix)
     cv2.putText(picture, str(size_in_um), coords, font , 1, color=(0,255,0), thickness = 2)
-    table_data.append([str(len(table_data) + 1), size_in_um])
-    print(table_data)
+    table_data.append([ size_in_um, coords])
 
-def createTable(table_path):
+def createTable(table_name):
+    # make this example reproducible
+    numpy.random.seed(0)
+    # define figure and axes
     fig, ax = plt.subplots()
-    table = ax.table(cellText=table_data, loc='center')
-    table.set_fontsize(14)
-    table.scale(1, 4)
+    # hide the axes
+    fig.patch.set_visible(False)
     ax.axis('off')
-    # display table
-    plt.show()
-    cv2.imwrite(table_path, plt)
+    ax.axis('tight')
+    # create data
+    df = pd.DataFrame(table_data, columns=['Размер в микрометрах', 'Координаты'])
+    df.to_excel( table_dir + '/' + table_name + '.xlsx')
 
 
-computeImage("photos/x1000.png")
+if not os.path.isdir("output"):
+    os.mkdir("output")
+
+if not os.path.isdir(table_dir):
+    os.mkdir(table_dir)
+if not os.path.isdir(image_dir):
+    os.mkdir(image_dir)
+
+print("Введите путь до папки с фотографиями: ")
+file_path = input()
+photos_dir = file_path
+# if(file_path) если на конце палка, то убрать
+with os.scandir(file_path) as files:
+    for file in files:
+        if file.name.find(' ') != -1:
+            new_name = file.name
+            new_name = new_name.replace(" ", "\\ ")
+            print(new_name)
+            computeImage(file_path + "/" + new_name)
+            break
+        computeImage(file_path + "/" + file.name)
+
